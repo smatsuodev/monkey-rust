@@ -1,6 +1,8 @@
 use std::fmt::Formatter;
 
+#[derive(Default, Debug, Eq, PartialEq)]
 pub enum TokenKind {
+    #[default]
     Illegal,
     EOF,
 
@@ -48,7 +50,27 @@ impl std::fmt::Display for TokenKind {
     }
 }
 
+impl TokenKind {
+    pub fn look_up_ident(ident: &str) -> TokenKind {
+        match ident {
+            "fn" => TokenKind::Function,
+            "let" => TokenKind::Let,
+            _ => TokenKind::Ident
+        }
+    }
+}
+
+#[derive(Default)]
 pub struct Token {
-    kind: TokenKind,
-    literal: String,
+    pub kind: TokenKind,
+    pub literal: String,
+}
+
+impl Token {
+    pub fn new(kind: TokenKind, literal: impl ToString) -> Token {
+        Token {
+            kind,
+            literal: literal.to_string(),
+        }
+    }
 }
