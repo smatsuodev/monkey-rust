@@ -92,7 +92,7 @@ impl TokenKind {
     }
 }
 
-#[derive(Default)]
+#[derive(Default, Debug)]
 pub struct Token {
     pub kind: TokenKind,
     pub literal: String,

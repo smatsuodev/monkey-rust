@@ -1,4 +1,9 @@
-mod token;
-mod lexer;
+use std::io;
 
-fn main() {}
+mod lexer;
+mod repl;
+mod token;
+
+fn main() {
+    repl::start(io::stdin(), io::stdout());
+}
