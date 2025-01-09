@@ -29,12 +29,32 @@ impl Lexer {
         self.skip_whitespace();
 
         match self.ch {
-            '=' => tok = Token::new(TokenKind::Assign, self.ch),
+            '=' => {
+                if self.peek_char() == '=' {
+                    self.read_char();
+                    tok = Token::new(TokenKind::Eq, "==");
+                } else {
+                    tok = Token::new(TokenKind::Assign, self.ch);
+                }
+            }
+            '+' => tok = Token::new(TokenKind::Plus, self.ch),
+            '-' => tok = Token::new(TokenKind::Minus, self.ch),
+            '!' => {
+                if self.peek_char() == '=' {
+                    self.read_char();
+                    tok = Token::new(TokenKind::NotEq, "!=");
+                } else {
+                    tok = Token::new(TokenKind::Bang, self.ch);
+                }
+            }
+            '*' => tok = Token::new(TokenKind::Asterisk, self.ch),
+            '/' => tok = Token::new(TokenKind::Slash, self.ch),
+            '<' => tok = Token::new(TokenKind::Lt, self.ch),
+            '>' => tok = Token::new(TokenKind::Gt, self.ch),
             ';' => tok = Token::new(TokenKind::SemiColon, self.ch),
+            ',' => tok = Token::new(TokenKind::Comma, self.ch),
             '(' => tok = Token::new(TokenKind::LParen, self.ch),
             ')' => tok = Token::new(TokenKind::RParen, self.ch),
-            ',' => tok = Token::new(TokenKind::Comma, self.ch),
-            '+' => tok = Token::new(TokenKind::Plus, self.ch),
             '{' => tok = Token::new(TokenKind::LBrace, self.ch),
             '}' => tok = Token::new(TokenKind::RBrace, self.ch),
             '\0' => tok = Token::new(TokenKind::EOF, ""),
@@ -83,6 +103,10 @@ impl Lexer {
         self.ch = self.input.chars().nth(self.read_position).unwrap_or('\0');
         self.position = self.read_position;
         self.read_position += 1;
+    }
+
+    fn peek_char(&self) -> char {
+        self.input.chars().nth(self.read_position).unwrap_or('\0')
     }
 
     fn skip_whitespace(&mut self) {
