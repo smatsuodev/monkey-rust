@@ -1,35 +1,51 @@
+#[cfg(test)]
+mod test;
+
 use crate::token::Token;
 use std::fmt::Debug;
 
 pub trait Node: Debug + PartialEq + Eq {
     fn token_literal(&self) -> String;
+    fn to_string(&self) -> String;
 }
 
-#[derive(Debug, PartialEq, Eq)]
-pub enum Statement {
-    LetStatement(LetStatement),
-    ReturnStatement(ReturnStatement),
-}
-
-impl Node for Statement {
-    fn token_literal(&self) -> String {
-        match self {
-            Statement::LetStatement(s) => s.token_literal(),
-            Statement::ReturnStatement(s) => s.token_literal(),
+macro_rules! define_node_enum {
+    ($enum_name:ident, $($variant:ident),*) => {
+        #[derive(Debug, PartialEq, Eq)]
+        pub enum $enum_name {
+            $(
+                $variant($variant),
+            )*
         }
-    }
+
+        impl Node for $enum_name {
+            fn token_literal(&self) -> String {
+                match self {
+                    $(
+                        $enum_name::$variant(s) => s.token_literal(),
+                    )*
+                }
+            }
+
+            fn to_string(&self) -> String {
+                match self {
+                    $(
+                        $enum_name::$variant(s) => s.to_string(),
+                    )*
+                }
+            }
+        }
+    };
 }
 
-#[derive(Debug, Eq, PartialEq)]
-pub enum Expression {
-    Identifier(Identifier),
-}
+define_node_enum!(
+    Statement,
+    LetStatement,
+    ReturnStatement,
+    ExpressionStatement
+);
 
-impl Node for Expression {
-    fn token_literal(&self) -> String {
-        todo!()
-    }
-}
+define_node_enum!(Expression, Identifier);
 
 #[derive(Debug, Eq, PartialEq)]
 pub struct Program {
@@ -44,6 +60,14 @@ impl Node for Program {
             .map(|s| s.token_literal())
             .unwrap_or(String::new())
     }
+
+    fn to_string(&self) -> String {
+        self.statements
+            .iter()
+            .map(|s| s.to_string())
+            .collect::<Vec<String>>()
+            .join("")
+    }
 }
 
 #[derive(Debug, Eq, PartialEq)]
@@ -56,6 +80,15 @@ pub struct LetStatement {
 impl Node for LetStatement {
     fn token_literal(&self) -> String {
         self.token.literal.clone()
+    }
+
+    fn to_string(&self) -> String {
+        format!(
+            "{} {} = {};",
+            self.token_literal(),
+            self.name.value,
+            self.value.as_ref().map_or(String::new(), |v| v.to_string())
+        )
     }
 }
 
@@ -79,6 +112,16 @@ impl Node for ReturnStatement {
     fn token_literal(&self) -> String {
         self.token.literal.clone()
     }
+
+    fn to_string(&self) -> String {
+        format!(
+            "{} {};",
+            self.token_literal(),
+            self.return_value
+                .as_ref()
+                .map_or(String::new(), |v| v.to_string())
+        )
+    }
 }
 
 impl ReturnStatement {
@@ -87,6 +130,28 @@ impl ReturnStatement {
             token,
             return_value,
         }
+    }
+}
+
+#[derive(Debug, Eq, PartialEq)]
+pub struct ExpressionStatement {
+    pub token: Token,
+    pub expression: Expression,
+}
+
+impl Node for ExpressionStatement {
+    fn token_literal(&self) -> String {
+        self.token.literal.clone()
+    }
+
+    fn to_string(&self) -> String {
+        self.expression.to_string()
+    }
+}
+
+impl ExpressionStatement {
+    pub fn new(token: Token, expression: Expression) -> ExpressionStatement {
+        ExpressionStatement { token, expression }
     }
 }
 
@@ -99,6 +164,10 @@ pub struct Identifier {
 impl Node for Identifier {
     fn token_literal(&self) -> String {
         self.token.literal.clone()
+    }
+
+    fn to_string(&self) -> String {
+        self.value.clone()
     }
 }
 
