@@ -103,10 +103,10 @@ if (5 < 10) {
 
     let mut l = Lexer::new(input);
 
-    for (expectedKind, expectedLiteral) in tests.into_iter() {
+    for (expected_kind, expected_literal) in tests.into_iter() {
         let tok = l.next_token();
 
-        assert_eq!(tok.kind, expectedKind);
-        assert_eq!(tok.literal, expectedLiteral);
+        assert_eq!(tok.kind, expected_kind);
+        assert_eq!(tok.literal, expected_literal);
     }
 }

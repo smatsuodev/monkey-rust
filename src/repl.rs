@@ -18,7 +18,8 @@ pub fn start(buf_in: impl Read, mut buf_out: impl Write) {
 
         let mut lexer = Lexer::new(&line);
 
-        while let token = lexer.next_token() {
+        loop {
+            let token = lexer.next_token();
             if token.kind == TokenKind::EOF {
                 break;
             }

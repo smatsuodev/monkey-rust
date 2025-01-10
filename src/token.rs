@@ -1,6 +1,6 @@
 use std::fmt::Formatter;
 
-#[derive(Default, Debug, Eq, PartialEq)]
+#[derive(Default, Debug, Eq, PartialEq, Copy, Clone)]
 pub enum TokenKind {
     #[default]
     Illegal,
@@ -92,7 +92,7 @@ impl TokenKind {
     }
 }
 
-#[derive(Default, Debug)]
+#[derive(Default, Debug, Clone, Eq, PartialEq)]
 pub struct Token {
     pub kind: TokenKind,
     pub literal: String,
