@@ -1,7 +1,7 @@
 #[cfg(test)]
 mod test;
 
-use crate::ast::{Expression, Identifier, LetStatement, Program, Statement};
+use crate::ast::{Identifier, LetStatement, Program, ReturnStatement, Statement};
 use crate::lexer::Lexer;
 use crate::token::{Token, TokenKind};
 
@@ -78,6 +78,7 @@ impl<'a> Parser<'a> {
     fn parse_statement(&mut self) -> Option<Statement> {
         match self.cur_token.kind {
             TokenKind::Let => self.parse_let_statement(),
+            TokenKind::Return => self.parse_return_statement(),
             _ => None,
         }
     }
@@ -95,6 +96,7 @@ impl<'a> Parser<'a> {
             return None;
         }
 
+        // TODO: セミコロンに遭遇するまで式を読み飛ばしてしまっている
         while !self.cur_token_is(TokenKind::SemiColon) {
             self.next_token()
         }
@@ -102,7 +104,22 @@ impl<'a> Parser<'a> {
         Some(Statement::LetStatement(LetStatement::new(
             token,
             name.clone(),
-            Expression::Identifier(name),
+            None,
+        )))
+    }
+
+    fn parse_return_statement(&mut self) -> Option<Statement> {
+        let token = self.cur_token.clone();
+
+        self.next_token();
+
+        // TODO: セミコロンに遭遇するまで式を読み飛ばしてしまっている
+        while !self.cur_token_is(TokenKind::SemiColon) {
+            self.next_token()
+        }
+
+        Some(Statement::ReturnStatement(ReturnStatement::new(
+            token, None,
         )))
     }
 }

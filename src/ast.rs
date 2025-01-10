@@ -8,12 +8,14 @@ pub trait Node: Debug + PartialEq + Eq {
 #[derive(Debug, PartialEq, Eq)]
 pub enum Statement {
     LetStatement(LetStatement),
+    ReturnStatement(ReturnStatement),
 }
 
 impl Node for Statement {
     fn token_literal(&self) -> String {
         match self {
             Statement::LetStatement(s) => s.token_literal(),
+            Statement::ReturnStatement(s) => s.token_literal(),
         }
     }
 }
@@ -48,7 +50,7 @@ impl Node for Program {
 pub struct LetStatement {
     pub token: Token,
     pub name: Box<Identifier>,
-    pub value: Expression,
+    pub value: Option<Expression>,
 }
 
 impl Node for LetStatement {
@@ -58,11 +60,32 @@ impl Node for LetStatement {
 }
 
 impl LetStatement {
-    pub fn new(token: Token, name: Identifier, value: Expression) -> LetStatement {
+    pub fn new(token: Token, name: Identifier, value: Option<Expression>) -> LetStatement {
         LetStatement {
             token,
             name: Box::new(name),
             value,
+        }
+    }
+}
+
+#[derive(Debug, Eq, PartialEq)]
+pub struct ReturnStatement {
+    pub token: Token,
+    pub return_value: Option<Expression>,
+}
+
+impl Node for ReturnStatement {
+    fn token_literal(&self) -> String {
+        self.token.literal.clone()
+    }
+}
+
+impl ReturnStatement {
+    pub fn new(token: Token, return_value: Option<Expression>) -> ReturnStatement {
+        ReturnStatement {
+            token,
+            return_value,
         }
     }
 }

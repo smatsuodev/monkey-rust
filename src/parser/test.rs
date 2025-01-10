@@ -48,3 +48,23 @@ let foobar = 838383;
         test_let_statement(stmt, tt);
     }
 }
+
+#[test]
+fn test_return_statements() {
+    let input = "
+return 5;
+return 10;
+return 993322;
+";
+    let mut l = Lexer::new(input);
+    let mut p = Parser::new(&mut l);
+
+    let program = p.parse_program();
+    check_parser_errors(&p);
+    assert_eq!(program.statements.len(), 3);
+
+    for stmt in program.statements {
+        assert!(matches!(stmt, Statement::ReturnStatement(_)));
+        assert_eq!(stmt.token_literal(), "return");
+    }
+}
