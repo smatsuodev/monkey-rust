@@ -1,6 +1,7 @@
 use super::*;
 use crate::ast::*;
 use crate::lexer::Lexer;
+use std::any::Any;
 
 fn test_let_statement(s: &Statement, name: &str) {
     assert_eq!(s.token_literal(), "let");
@@ -12,11 +13,46 @@ fn test_let_statement(s: &Statement, name: &str) {
     assert_eq!(let_stmt.name.token_literal(), name);
 }
 
-fn test_integer_literal(il: Box<Expression>, value: i64) {
-    assert!(matches!(*il, Expression::IntegerLiteral(_)));
+fn test_integer_literal(il: Expression, value: i64) {
+    assert!(matches!(il, Expression::IntegerLiteral(_)));
     let int: IntegerLiteral = il.try_into().unwrap();
     assert_eq!(int.value, value);
     assert_eq!(int.token_literal(), value.to_string());
+}
+
+fn test_identifier(exp: Expression, value: String) {
+    assert!(matches!(exp, Expression::Identifier(_)));
+    let ident: Identifier = exp.try_into().unwrap();
+    assert_eq!(ident.value, value);
+    assert_eq!(ident.token_literal(), value);
+}
+
+macro_rules! test_literal_expression {
+    ($exp:expr, $value:expr) => {
+        if let Some(value) = (&$value as &dyn Any).downcast_ref::<i32>() {
+            test_integer_literal($exp, *value as i64);
+        } else if let Some(value) = (&$value as &dyn Any).downcast_ref::<i64>() {
+            test_integer_literal($exp, *value);
+        } else if let Some(value) = (&$value as &dyn Any).downcast_ref::<&str>() {
+            test_identifier($exp, value.to_string());
+        } else {
+            panic!(
+                "type of value not handled. got={:?}, type={:?}",
+                $value,
+                $value.type_id()
+            );
+        }
+    };
+}
+
+macro_rules! test_infix_expression {
+    ($exp:expr, $left:expr, $op:expr, $right:expr) => {
+        assert!(matches!($exp, Expression::InfixExpression(_)));
+        let infix: InfixExpression = $exp.try_into().unwrap();
+        test_literal_expression!(*infix.left.unwrap(), $left);
+        assert_eq!(infix.operator, $op);
+        test_literal_expression!(*infix.right.unwrap(), $right);
+    };
 }
 
 fn check_parser_errors(p: &Parser) {
@@ -84,9 +120,7 @@ fn test_identifier_expression() {
     assert_eq!(program.statements.len(), 1);
 
     let stmt: ExpressionStatement = (&program.statements[0]).try_into().unwrap();
-    let ident: Identifier = stmt.expression.unwrap().try_into().unwrap();
-    assert_eq!(ident.value, "foobar");
-    assert_eq!(ident.token_literal(), "foobar");
+    test_literal_expression!(stmt.expression.unwrap(), "foobar");
 }
 
 #[test]
@@ -100,9 +134,7 @@ fn test_integer_literal_expression() {
     assert_eq!(program.statements.len(), 1);
 
     let stmt: ExpressionStatement = (&program.statements[0]).try_into().unwrap();
-    let int: IntegerLiteral = stmt.expression.unwrap().try_into().unwrap();
-    assert_eq!(int.value, 5);
-    assert_eq!(int.token_literal(), "5");
+    test_literal_expression!(stmt.expression.unwrap(), 5);
 }
 
 #[test]
@@ -119,7 +151,7 @@ fn test_parsing_prefix_expressions() {
         let stmt: ExpressionStatement = (&program.statements[0]).try_into().unwrap();
         let exp: PrefixExpression = stmt.expression.unwrap().try_into().unwrap();
         assert_eq!(exp.operator, op);
-        test_integer_literal(exp.right.unwrap(), value);
+        test_literal_expression!(*exp.right.unwrap(), value);
     }
 }
 
@@ -144,10 +176,8 @@ fn test_parsing_infix_expressions() {
         assert_eq!(program.statements.len(), 1);
 
         let stmt: ExpressionStatement = (&program.statements[0]).try_into().unwrap();
-        let exp: InfixExpression = stmt.expression.unwrap().try_into().unwrap();
-        test_integer_literal(exp.left.unwrap(), left);
-        assert_eq!(exp.operator, op);
-        test_integer_literal(exp.right.unwrap(), right);
+        let a = stmt.expression.clone().unwrap();
+        test_infix_expression!(stmt.expression.clone().unwrap(), left, op, right);
     }
 }
 
