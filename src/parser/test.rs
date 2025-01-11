@@ -12,6 +12,13 @@ fn test_let_statement(s: &Statement, name: &str) {
     assert_eq!(let_stmt.name.token_literal(), name);
 }
 
+fn test_integer_literal(il: Box<Expression>, value: i64) {
+    assert!(matches!(*il, Expression::IntegerLiteral(_)));
+    let int: IntegerLiteral = il.try_into().unwrap();
+    assert_eq!(int.value, value);
+    assert_eq!(int.token_literal(), value.to_string());
+}
+
 fn check_parser_errors(p: &Parser) {
     let errors = p.errors();
     if errors.len() == 0 {
@@ -96,4 +103,22 @@ fn test_integer_literal_expression() {
     let int: IntegerLiteral = stmt.expression.unwrap().try_into().unwrap();
     assert_eq!(int.value, 5);
     assert_eq!(int.token_literal(), "5");
+}
+
+#[test]
+fn test_parsing_prefix_expressions() {
+    let prefix_tests = vec![("!5;", "!", 5), ("-15;", "-", 15)];
+
+    for (input, op, value) in prefix_tests {
+        let mut l = Lexer::new(input);
+        let mut p = Parser::new(&mut l);
+        let program = p.parse_program();
+        check_parser_errors(&p);
+        assert_eq!(program.statements.len(), 1);
+
+        let stmt: ExpressionStatement = (&program.statements[0]).try_into().unwrap();
+        let exp: PrefixExpression = stmt.expression.unwrap().try_into().unwrap();
+        assert_eq!(exp.operator, op);
+        test_integer_literal(exp.right.unwrap(), value);
+    }
 }

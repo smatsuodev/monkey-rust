@@ -18,7 +18,7 @@ define_node_enum!(
     ExpressionStatement,
 );
 
-define_node_enum!(Expression, Identifier, IntegerLiteral,);
+define_node_enum!(Expression, Identifier, IntegerLiteral, PrefixExpression);
 
 #[derive(Debug, Eq, PartialEq, Clone)]
 pub struct Program {
@@ -174,5 +174,40 @@ impl Node for IntegerLiteral {
 impl IntegerLiteral {
     pub fn new(token: Token, value: i64) -> IntegerLiteral {
         IntegerLiteral { token, value }
+    }
+}
+
+#[derive(Debug, Eq, PartialEq, Clone)]
+pub struct PrefixExpression {
+    pub token: Token,
+    pub operator: String,
+    pub right: Option<Box<Expression>>,
+}
+
+impl Node for PrefixExpression {
+    fn token_literal(&self) -> String {
+        self.token.literal.clone()
+    }
+
+    fn to_string(&self) -> String {
+        format!(
+            "({}{})",
+            self.operator,
+            self.right.as_ref().map_or(String::new(), |r| r.to_string())
+        )
+    }
+}
+
+impl PrefixExpression {
+    pub fn new(
+        token: Token,
+        operator: impl ToString,
+        right: Option<Expression>,
+    ) -> PrefixExpression {
+        PrefixExpression {
+            token,
+            operator: operator.to_string(),
+            right: right.map(Box::new),
+        }
     }
 }

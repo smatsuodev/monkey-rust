@@ -51,7 +51,18 @@ macro_rules! define_node_enum {
                     }
                 }
             }
+            impl TryFrom<Box<$enum_name>> for $variant {
+                type Error = ();
+
+                fn try_from(node: Box<$enum_name>) -> Result<$variant, Self::Error> {
+                    match *node {
+                        $enum_name::$variant(s) => Ok(s.clone()),
+                        _ => Err(()),
+                    }
+                }
+            }
         )*
     };
 }
+
 pub(crate) use define_node_enum;

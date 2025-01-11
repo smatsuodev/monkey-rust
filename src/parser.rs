@@ -2,8 +2,8 @@
 mod test;
 
 use crate::ast::{
-    Expression, ExpressionStatement, Identifier, IntegerLiteral, LetStatement, Program,
-    ReturnStatement, Statement,
+    Expression, ExpressionStatement, Identifier, IntegerLiteral, LetStatement, PrefixExpression,
+    Program, ReturnStatement, Statement,
 };
 use crate::lexer::Lexer;
 use crate::token::{Token, TokenKind};
@@ -45,6 +45,8 @@ impl<'a> Parser<'a> {
 
         p.register_prefix(TokenKind::Ident, Parser::parse_identifier);
         p.register_prefix(TokenKind::Int, Parser::parse_integer_literal);
+        p.register_prefix(TokenKind::Bang, Parser::parse_prefix_expression);
+        p.register_prefix(TokenKind::Minus, Parser::parse_prefix_expression);
         p.next_token();
         p.next_token();
 
@@ -57,6 +59,11 @@ impl<'a> Parser<'a> {
 
     fn register_infix(&mut self, k: TokenKind, f: InfixParseFn) {
         self.infix_parse_fns.insert(k, f);
+    }
+
+    fn no_prefix_parse_fn_error(&mut self, k: TokenKind) {
+        let msg = format!("no prefix parse function for {} found", k);
+        self.errors.push(msg);
     }
 
     pub fn errors(&self) -> &Vec<String> {
@@ -169,7 +176,13 @@ impl<'a> Parser<'a> {
     }
 
     fn parse_expression(&mut self, precedence: Precedence) -> Option<Expression> {
-        let prefix = self.prefix_parse_fns.get(&self.cur_token.kind)?.clone();
+        let prefix = match self.prefix_parse_fns.get(&self.cur_token.kind) {
+            Some(f) => f,
+            None => {
+                self.no_prefix_parse_fn_error(self.cur_token.kind);
+                return None;
+            }
+        };
         let left_exp = prefix(self);
 
         left_exp
@@ -188,5 +201,16 @@ impl<'a> Parser<'a> {
         })?;
 
         Some(IntegerLiteral::new(token, value).into())
+    }
+
+    fn parse_prefix_expression(&mut self) -> Option<Expression> {
+        let token = self.cur_token.clone();
+        let operator = self.cur_token.literal.clone();
+
+        self.next_token();
+
+        let right = self.parse_expression(Precedence::Prefix);
+
+        Some(PrefixExpression::new(token, operator, right).into())
     }
 }
