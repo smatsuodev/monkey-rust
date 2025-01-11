@@ -2,7 +2,8 @@
 mod test;
 
 use crate::ast::{
-    Expression, ExpressionStatement, Identifier, LetStatement, Program, ReturnStatement, Statement,
+    Expression, ExpressionStatement, Identifier, IntegerLiteral, LetStatement, Program,
+    ReturnStatement, Statement,
 };
 use crate::lexer::Lexer;
 use crate::token::{Token, TokenKind};
@@ -43,6 +44,7 @@ impl<'a> Parser<'a> {
         };
 
         p.register_prefix(TokenKind::Ident, Parser::parse_identifier);
+        p.register_prefix(TokenKind::Int, Parser::parse_integer_literal);
         p.next_token();
         p.next_token();
 
@@ -175,5 +177,16 @@ impl<'a> Parser<'a> {
 
     fn parse_identifier(&mut self) -> Option<Expression> {
         Some(Identifier::new(self.cur_token.clone(), self.cur_token.literal.clone()).into())
+    }
+
+    fn parse_integer_literal(&mut self) -> Option<Expression> {
+        let token = self.cur_token.clone();
+        let value = self.cur_token.literal.parse::<i64>().ok().or_else(|| {
+            let msg = format!("could not parse {} as integer", self.cur_token.literal);
+            self.errors.push(msg);
+            None
+        })?;
+
+        Some(IntegerLiteral::new(token, value).into())
     }
 }

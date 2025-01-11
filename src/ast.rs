@@ -1,69 +1,14 @@
 #[cfg(test)]
 mod test;
+mod util;
 
+use crate::ast::util::define_node_enum;
 use crate::token::Token;
 use std::fmt::Debug;
 
 pub trait Node: Debug + PartialEq + Eq {
     fn token_literal(&self) -> String;
     fn to_string(&self) -> String;
-}
-
-macro_rules! define_node_enum {
-    ($enum_name:ident, $($variant:ident),* $(,)?) => {
-        #[derive(Debug, PartialEq, Eq,Clone)]
-        pub enum $enum_name {
-            $(
-                $variant($variant),
-            )*
-        }
-
-        impl Node for $enum_name {
-            fn token_literal(&self) -> String {
-                match self {
-                    $(
-                        $enum_name::$variant(s) => s.token_literal(),
-                    )*
-                }
-            }
-
-            fn to_string(&self) -> String {
-                match self {
-                    $(
-                        $enum_name::$variant(s) => s.to_string(),
-                    )*
-                }
-            }
-        }
-
-        $(
-            impl From<$variant> for $enum_name {
-                fn from(variant: $variant) -> $enum_name {
-                    $enum_name::$variant(variant)
-                }
-            }
-            impl TryFrom<$enum_name> for $variant {
-                type Error = ();
-
-                fn try_from(node: $enum_name) -> Result<$variant, Self::Error> {
-                    match node {
-                        $enum_name::$variant(s) => Ok(s),
-                        _ => Err(()),
-                    }
-                }
-            }
-            impl TryFrom<&$enum_name> for $variant {
-                type Error = ();
-
-                fn try_from(node: &$enum_name) -> Result<$variant, Self::Error> {
-                    match node {
-                        $enum_name::$variant(s) => Ok(s.clone()),
-                        _ => Err(()),
-                    }
-                }
-            }
-        )*
-    };
 }
 
 define_node_enum!(
@@ -73,7 +18,7 @@ define_node_enum!(
     ExpressionStatement,
 );
 
-define_node_enum!(Expression, Identifier);
+define_node_enum!(Expression, Identifier, IntegerLiteral,);
 
 #[derive(Debug, Eq, PartialEq, Clone)]
 pub struct Program {
@@ -207,5 +152,27 @@ impl Identifier {
             token,
             value: value.to_string(),
         }
+    }
+}
+
+#[derive(Debug, Eq, PartialEq, Clone)]
+pub struct IntegerLiteral {
+    pub token: Token,
+    pub value: i64,
+}
+
+impl Node for IntegerLiteral {
+    fn token_literal(&self) -> String {
+        self.token.literal.clone()
+    }
+
+    fn to_string(&self) -> String {
+        self.token.literal.clone()
+    }
+}
+
+impl IntegerLiteral {
+    pub fn new(token: Token, value: i64) -> IntegerLiteral {
+        IntegerLiteral { token, value }
     }
 }

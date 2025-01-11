@@ -1,5 +1,5 @@
 use super::*;
-use crate::ast::{ExpressionStatement, Node, Statement};
+use crate::ast::*;
 use crate::lexer::Lexer;
 
 fn test_let_statement(s: &Statement, name: &str) {
@@ -80,4 +80,20 @@ fn test_identifier_expression() {
     let ident: Identifier = stmt.expression.unwrap().try_into().unwrap();
     assert_eq!(ident.value, "foobar");
     assert_eq!(ident.token_literal(), "foobar");
+}
+
+#[test]
+fn test_integer_literal_expression() {
+    let input = "5;";
+
+    let mut l = Lexer::new(input);
+    let mut p = Parser::new(&mut l);
+    let program = p.parse_program();
+    check_parser_errors(&p);
+    assert_eq!(program.statements.len(), 1);
+
+    let stmt: ExpressionStatement = (&program.statements[0]).try_into().unwrap();
+    let int: IntegerLiteral = stmt.expression.unwrap().try_into().unwrap();
+    assert_eq!(int.value, 5);
+    assert_eq!(int.token_literal(), "5");
 }
