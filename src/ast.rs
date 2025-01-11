@@ -18,7 +18,13 @@ define_node_enum!(
     ExpressionStatement,
 );
 
-define_node_enum!(Expression, Identifier, IntegerLiteral, PrefixExpression);
+define_node_enum!(
+    Expression,
+    Identifier,
+    IntegerLiteral,
+    PrefixExpression,
+    InfixExpression,
+);
 
 #[derive(Debug, Eq, PartialEq, Clone)]
 pub struct Program {
@@ -206,6 +212,45 @@ impl PrefixExpression {
     ) -> PrefixExpression {
         PrefixExpression {
             token,
+            operator: operator.to_string(),
+            right: right.map(Box::new),
+        }
+    }
+}
+
+#[derive(Debug, Eq, PartialEq, Clone)]
+pub struct InfixExpression {
+    pub token: Token,
+    pub left: Option<Box<Expression>>,
+    pub operator: String,
+    pub right: Option<Box<Expression>>,
+}
+
+impl Node for InfixExpression {
+    fn token_literal(&self) -> String {
+        self.token.literal.clone()
+    }
+
+    fn to_string(&self) -> String {
+        format!(
+            "({} {} {})",
+            self.left.as_ref().map_or(String::new(), |l| l.to_string()),
+            self.operator,
+            self.right.as_ref().map_or(String::new(), |r| r.to_string())
+        )
+    }
+}
+
+impl InfixExpression {
+    pub fn new(
+        token: Token,
+        left: Option<Expression>,
+        operator: impl ToString,
+        right: Option<Expression>,
+    ) -> InfixExpression {
+        InfixExpression {
+            token,
+            left: left.map(Box::new),
             operator: operator.to_string(),
             right: right.map(Box::new),
         }

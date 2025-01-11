@@ -122,3 +122,60 @@ fn test_parsing_prefix_expressions() {
         test_integer_literal(exp.right.unwrap(), value);
     }
 }
+
+#[test]
+fn test_parsing_infix_expressions() {
+    let infix_tests = vec![
+        ("5 + 5;", 5, "+", 5),
+        ("5 - 5;", 5, "-", 5),
+        ("5 * 5;", 5, "*", 5),
+        ("5 / 5;", 5, "/", 5),
+        ("5 > 5;", 5, ">", 5),
+        ("5 < 5;", 5, "<", 5),
+        ("5 == 5;", 5, "==", 5),
+        ("5 != 5;", 5, "!=", 5),
+    ];
+
+    for (input, left, op, right) in infix_tests {
+        let mut l = Lexer::new(input);
+        let mut p = Parser::new(&mut l);
+        let program = p.parse_program();
+        check_parser_errors(&p);
+        assert_eq!(program.statements.len(), 1);
+
+        let stmt: ExpressionStatement = (&program.statements[0]).try_into().unwrap();
+        let exp: InfixExpression = stmt.expression.unwrap().try_into().unwrap();
+        test_integer_literal(exp.left.unwrap(), left);
+        assert_eq!(exp.operator, op);
+        test_integer_literal(exp.right.unwrap(), right);
+    }
+}
+
+#[test]
+fn test_operator_precedence_parsing() {
+    let tests = vec![
+        ("-a * b", "((-a) * b)"),
+        ("!-a", "(!(-a))"),
+        ("a + b + c", "((a + b) + c)"),
+        ("a + b - c", "((a + b) - c)"),
+        ("a * b * c", "((a * b) * c)"),
+        ("a * b / c", "((a * b) / c)"),
+        ("a + b / c", "(a + (b / c))"),
+        ("a + b * c + d / e - f", "(((a + (b * c)) + (d / e)) - f)"),
+        ("3 + 4; -5 * 5", "(3 + 4)((-5) * 5)"),
+        ("5 > 4 == 3 < 4", "((5 > 4) == (3 < 4))"),
+        ("5 < 4 != 3 > 4", "((5 < 4) != (3 > 4))"),
+        (
+            "3 + 4 * 5 == 3 * 1 + 4 * 5",
+            "((3 + (4 * 5)) == ((3 * 1) + (4 * 5)))",
+        ),
+    ];
+
+    for (input, expected) in tests {
+        let mut l = Lexer::new(input);
+        let mut p = Parser::new(&mut l);
+        let program = p.parse_program();
+        check_parser_errors(&p);
+        assert_eq!(program.to_string(), expected);
+    }
+}
