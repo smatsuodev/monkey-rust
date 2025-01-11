@@ -91,7 +91,6 @@ impl<'a> Parser<'a> {
 
     fn no_prefix_parse_fn_error(&mut self, k: TokenKind) {
         let msg = format!("no prefix parse function for {} found", k);
-        panic!();
         self.errors.push(msg);
     }
 
