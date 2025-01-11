@@ -10,8 +10,8 @@ pub trait Node: Debug + PartialEq + Eq {
 }
 
 macro_rules! define_node_enum {
-    ($enum_name:ident, $($variant:ident),*) => {
-        #[derive(Debug, PartialEq, Eq)]
+    ($enum_name:ident, $($variant:ident),* $(,)?) => {
+        #[derive(Debug, PartialEq, Eq,Clone)]
         pub enum $enum_name {
             $(
                 $variant($variant),
@@ -35,6 +35,34 @@ macro_rules! define_node_enum {
                 }
             }
         }
+
+        $(
+            impl From<$variant> for $enum_name {
+                fn from(variant: $variant) -> $enum_name {
+                    $enum_name::$variant(variant)
+                }
+            }
+            impl TryFrom<$enum_name> for $variant {
+                type Error = ();
+
+                fn try_from(node: $enum_name) -> Result<$variant, Self::Error> {
+                    match node {
+                        $enum_name::$variant(s) => Ok(s),
+                        _ => Err(()),
+                    }
+                }
+            }
+            impl TryFrom<&$enum_name> for $variant {
+                type Error = ();
+
+                fn try_from(node: &$enum_name) -> Result<$variant, Self::Error> {
+                    match node {
+                        $enum_name::$variant(s) => Ok(s.clone()),
+                        _ => Err(()),
+                    }
+                }
+            }
+        )*
     };
 }
 
@@ -42,12 +70,12 @@ define_node_enum!(
     Statement,
     LetStatement,
     ReturnStatement,
-    ExpressionStatement
+    ExpressionStatement,
 );
 
 define_node_enum!(Expression, Identifier);
 
-#[derive(Debug, Eq, PartialEq)]
+#[derive(Debug, Eq, PartialEq, Clone)]
 pub struct Program {
     pub statements: Vec<Statement>,
 }
@@ -70,7 +98,7 @@ impl Node for Program {
     }
 }
 
-#[derive(Debug, Eq, PartialEq)]
+#[derive(Debug, Eq, PartialEq, Clone)]
 pub struct LetStatement {
     pub token: Token,
     pub name: Box<Identifier>,
@@ -102,7 +130,7 @@ impl LetStatement {
     }
 }
 
-#[derive(Debug, Eq, PartialEq)]
+#[derive(Debug, Eq, PartialEq, Clone)]
 pub struct ReturnStatement {
     pub token: Token,
     pub return_value: Option<Expression>,
@@ -133,10 +161,10 @@ impl ReturnStatement {
     }
 }
 
-#[derive(Debug, Eq, PartialEq)]
+#[derive(Debug, Eq, PartialEq, Clone)]
 pub struct ExpressionStatement {
     pub token: Token,
-    pub expression: Expression,
+    pub expression: Option<Expression>,
 }
 
 impl Node for ExpressionStatement {
@@ -145,12 +173,14 @@ impl Node for ExpressionStatement {
     }
 
     fn to_string(&self) -> String {
-        self.expression.to_string()
+        self.expression
+            .as_ref()
+            .map_or(String::new(), |e| e.to_string())
     }
 }
 
 impl ExpressionStatement {
-    pub fn new(token: Token, expression: Expression) -> ExpressionStatement {
+    pub fn new(token: Token, expression: Option<Expression>) -> ExpressionStatement {
         ExpressionStatement { token, expression }
     }
 }

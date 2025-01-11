@@ -1,6 +1,6 @@
 use std::fmt::Formatter;
 
-#[derive(Default, Debug, Eq, PartialEq, Copy, Clone)]
+#[derive(Default, Debug, Eq, PartialEq, Copy, Clone, Hash)]
 pub enum TokenKind {
     #[default]
     Illegal,

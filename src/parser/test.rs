@@ -1,15 +1,12 @@
-use crate::ast::{Node, Statement};
+use super::*;
+use crate::ast::{ExpressionStatement, Node, Statement};
 use crate::lexer::Lexer;
-use crate::parser::Parser;
 
 fn test_let_statement(s: &Statement, name: &str) {
     assert_eq!(s.token_literal(), "let");
 
     assert!(matches!(s, Statement::LetStatement(_)));
-    let let_stmt = match s {
-        Statement::LetStatement(stmt) => stmt,
-        _ => unreachable!(),
-    };
+    let let_stmt: LetStatement = s.try_into().unwrap();
 
     assert_eq!(let_stmt.name.value, name);
     assert_eq!(let_stmt.name.token_literal(), name);
@@ -67,4 +64,20 @@ return 993322;
         assert!(matches!(stmt, Statement::ReturnStatement(_)));
         assert_eq!(stmt.token_literal(), "return");
     }
+}
+
+#[test]
+fn test_identifier_expression() {
+    let input = "foobar;";
+
+    let mut l = Lexer::new(input);
+    let mut p = Parser::new(&mut l);
+    let program = p.parse_program();
+    check_parser_errors(&p);
+    assert_eq!(program.statements.len(), 1);
+
+    let stmt: ExpressionStatement = (&program.statements[0]).try_into().unwrap();
+    let ident: Identifier = stmt.expression.unwrap().try_into().unwrap();
+    assert_eq!(ident.value, "foobar");
+    assert_eq!(ident.token_literal(), "foobar");
 }

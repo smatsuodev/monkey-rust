@@ -1,15 +1,34 @@
 #[cfg(test)]
 mod test;
 
-use crate::ast::{Identifier, LetStatement, Program, ReturnStatement, Statement};
+use crate::ast::{
+    Expression, ExpressionStatement, Identifier, LetStatement, Program, ReturnStatement, Statement,
+};
 use crate::lexer::Lexer;
 use crate::token::{Token, TokenKind};
+use std::collections::HashMap;
+
+type PrefixParseFn<'a> = fn(&mut Parser<'a>) -> Option<Expression>;
+type InfixParseFn = fn(&mut Parser, Expression) -> Option<Expression>;
 
 pub struct Parser<'a> {
     l: &'a mut Lexer,
     cur_token: Token,
     peek_token: Token,
     errors: Vec<String>,
+    prefix_parse_fns: HashMap<TokenKind, PrefixParseFn<'a>>,
+    infix_parse_fns: HashMap<TokenKind, InfixParseFn>,
+}
+
+#[derive(Ord, PartialOrd, Eq, PartialEq)]
+enum Precedence {
+    Lowest,
+    Equals,      // ==
+    LessGreater, // > or <
+    Sum,         //+
+    Product,     // *
+    Prefix,      // -X or !X
+    Call,        // myFunction(X)
 }
 
 impl<'a> Parser<'a> {
@@ -19,12 +38,23 @@ impl<'a> Parser<'a> {
             cur_token: Token::default(),
             peek_token: Token::default(),
             errors: Vec::new(),
+            prefix_parse_fns: HashMap::new(),
+            infix_parse_fns: HashMap::new(),
         };
 
+        p.register_prefix(TokenKind::Ident, Parser::parse_identifier);
         p.next_token();
         p.next_token();
 
         p
+    }
+
+    fn register_prefix(&mut self, k: TokenKind, f: PrefixParseFn<'a>) {
+        self.prefix_parse_fns.insert(k, f);
+    }
+
+    fn register_infix(&mut self, k: TokenKind, f: InfixParseFn) {
+        self.infix_parse_fns.insert(k, f);
     }
 
     pub fn errors(&self) -> &Vec<String> {
@@ -79,7 +109,7 @@ impl<'a> Parser<'a> {
         match self.cur_token.kind {
             TokenKind::Let => self.parse_let_statement(),
             TokenKind::Return => self.parse_return_statement(),
-            _ => None,
+            _ => self.parse_expression_statement(),
         }
     }
 
@@ -121,5 +151,29 @@ impl<'a> Parser<'a> {
         Some(Statement::ReturnStatement(ReturnStatement::new(
             token, None,
         )))
+    }
+
+    fn parse_expression_statement(&mut self) -> Option<Statement> {
+        let stmt = ExpressionStatement::new(
+            self.cur_token.clone(),
+            self.parse_expression(Precedence::Lowest),
+        );
+
+        if self.peek_token_is(TokenKind::SemiColon) {
+            self.next_token();
+        }
+
+        Some(stmt.into())
+    }
+
+    fn parse_expression(&mut self, precedence: Precedence) -> Option<Expression> {
+        let prefix = self.prefix_parse_fns.get(&self.cur_token.kind)?.clone();
+        let left_exp = prefix(self);
+
+        left_exp
+    }
+
+    fn parse_identifier(&mut self) -> Option<Expression> {
+        Some(Identifier::new(self.cur_token.clone(), self.cur_token.literal.clone()).into())
     }
 }
