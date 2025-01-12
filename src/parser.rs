@@ -2,8 +2,9 @@
 mod test;
 
 use crate::ast::{
-    Boolean, Expression, ExpressionStatement, Identifier, InfixExpression, IntegerLiteral,
-    LetStatement, PrefixExpression, Program, ReturnStatement, Statement,
+    BlockStatement, Boolean, Expression, ExpressionStatement, Identifier, IfExpression,
+    InfixExpression, IntegerLiteral, LetStatement, PrefixExpression, Program, ReturnStatement,
+    Statement,
 };
 use crate::lexer::Lexer;
 use crate::token::{Token, TokenKind};
@@ -50,6 +51,7 @@ impl<'a> Parser<'a> {
         p.register_prefix(TokenKind::Bang, Parser::parse_prefix_expression);
         p.register_prefix(TokenKind::Minus, Parser::parse_prefix_expression);
         p.register_prefix(TokenKind::LParen, Parser::parse_grouped_expression);
+        p.register_prefix(TokenKind::If, Parser::parse_if_expression);
 
         p.register_infix(TokenKind::Plus, Parser::parse_infix_expression);
         p.register_infix(TokenKind::Minus, Parser::parse_infix_expression);
@@ -282,5 +284,55 @@ impl<'a> Parser<'a> {
         }
 
         exp
+    }
+
+    fn parse_if_expression(&mut self) -> Option<Expression> {
+        let token = self.cur_token.clone();
+
+        if !self.expect_peek(TokenKind::LParen) {
+            return None;
+        }
+
+        self.next_token();
+        let condition = self.parse_expression(Precedence::Lowest);
+
+        if !self.expect_peek(TokenKind::RParen) {
+            return None;
+        }
+
+        if !self.expect_peek(TokenKind::LBrace) {
+            return None;
+        }
+
+        let consequence = self.parse_block_statement();
+        let mut expression = IfExpression::new(token, condition, consequence, None);
+
+        if self.peek_token_is(TokenKind::Else) {
+            self.next_token();
+
+            if !self.expect_peek(TokenKind::LBrace) {
+                return None;
+            }
+
+            expression.alternative = Some(Box::new(self.parse_block_statement()));
+        }
+
+        Some(expression.into())
+    }
+
+    fn parse_block_statement(&mut self) -> BlockStatement {
+        let mut block = BlockStatement::new(self.cur_token.clone(), vec![]);
+
+        self.next_token();
+
+        while !self.cur_token_is(TokenKind::RBrace) && !self.cur_token_is(TokenKind::EOF) {
+            let stmt = self.parse_statement();
+            if let Some(stmt) = stmt {
+                block.statements.push(stmt);
+            }
+            self.next_token();
+        }
+
+        block
     }
 }

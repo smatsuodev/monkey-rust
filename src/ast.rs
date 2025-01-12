@@ -16,6 +16,7 @@ define_node_enum!(
     LetStatement,
     ReturnStatement,
     ExpressionStatement,
+    BlockStatement,
 );
 
 define_node_enum!(
@@ -25,6 +26,7 @@ define_node_enum!(
     PrefixExpression,
     InfixExpression,
     Boolean,
+    IfExpression,
 );
 
 #[derive(Debug, Eq, PartialEq, Clone)]
@@ -134,6 +136,32 @@ impl Node for ExpressionStatement {
 impl ExpressionStatement {
     pub fn new(token: Token, expression: Option<Expression>) -> ExpressionStatement {
         ExpressionStatement { token, expression }
+    }
+}
+
+#[derive(Debug, Eq, PartialEq, Clone)]
+pub struct BlockStatement {
+    pub token: Token,
+    pub statements: Vec<Statement>,
+}
+
+impl Node for BlockStatement {
+    fn token_literal(&self) -> String {
+        self.token.literal.clone()
+    }
+
+    fn to_string(&self) -> String {
+        self.statements
+            .iter()
+            .map(|s| s.to_string())
+            .collect::<Vec<String>>()
+            .join("")
+    }
+}
+
+impl BlockStatement {
+    pub fn new(token: Token, statements: Vec<Statement>) -> BlockStatement {
+        BlockStatement { token, statements }
     }
 }
 
@@ -277,5 +305,51 @@ impl Node for Boolean {
 impl Boolean {
     pub fn new(token: Token, value: bool) -> Boolean {
         Boolean { token, value }
+    }
+}
+
+#[derive(Debug, Eq, PartialEq, Clone)]
+pub struct IfExpression {
+    pub token: Token,
+    pub condition: Option<Box<Expression>>,
+    pub consequence: Box<BlockStatement>,
+    pub alternative: Option<Box<BlockStatement>>,
+}
+
+impl Node for IfExpression {
+    fn token_literal(&self) -> String {
+        self.token.literal.clone()
+    }
+
+    fn to_string(&self) -> String {
+        let mut s = format!(
+            "if {} {}",
+            self.condition
+                .as_ref()
+                .map_or(String::new(), |c| c.to_string()),
+            self.consequence.to_string()
+        );
+
+        if let Some(alt) = &self.alternative {
+            s.push_str(&format!("else {}", alt.to_string()));
+        }
+
+        s
+    }
+}
+
+impl IfExpression {
+    pub fn new(
+        token: Token,
+        condition: Option<Expression>,
+        consequence: BlockStatement,
+        alternative: Option<BlockStatement>,
+    ) -> IfExpression {
+        IfExpression {
+            token,
+            condition: condition.map(Box::new),
+            consequence: Box::new(consequence),
+            alternative: alternative.map(Box::new),
+        }
     }
 }

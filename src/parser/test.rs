@@ -234,3 +234,43 @@ fn test_operator_precedence_parsing() {
         assert_eq!(program.to_string(), expected);
     }
 }
+
+#[test]
+fn test_if_expression() {
+    let input = "if (x < y) { x }";
+    let mut l = Lexer::new(input);
+    let mut p = Parser::new(&mut l);
+    let program = p.parse_program();
+    check_parser_errors(&p);
+    assert_eq!(program.statements.len(), 1);
+
+    let stmt: ExpressionStatement = (&program.statements[0]).try_into().unwrap();
+    let exp: IfExpression = stmt.expression.unwrap().try_into().unwrap();
+    test_infix_expression!(*exp.condition.as_ref().unwrap().clone(), &"x", "<", &"y");
+    assert_eq!(exp.consequence.statements.len(), 1);
+    let consequence: ExpressionStatement = (&exp.consequence.statements[0]).try_into().unwrap();
+    test_identifier(consequence.expression.unwrap(), "x".to_string());
+    assert_eq!(exp.alternative, None);
+}
+
+#[test]
+fn test_if_else_expression() {
+    let input = "if (x < y) { x } else { y }";
+    let mut l = Lexer::new(input);
+    let mut p = Parser::new(&mut l);
+    let program = p.parse_program();
+    check_parser_errors(&p);
+    assert_eq!(program.statements.len(), 1);
+
+    let stmt: ExpressionStatement = (&program.statements[0]).try_into().unwrap();
+    let exp: IfExpression = stmt.expression.unwrap().try_into().unwrap();
+    test_infix_expression!(*exp.condition.as_ref().unwrap().clone(), &"x", "<", &"y");
+    assert_eq!(exp.consequence.statements.len(), 1);
+    let consequence: ExpressionStatement = (&exp.consequence.statements[0]).try_into().unwrap();
+    test_identifier(consequence.expression.unwrap(), "x".to_string());
+    assert_eq!(exp.alternative.as_ref().unwrap().statements.len(), 1);
+    let alternative: ExpressionStatement = (&exp.alternative.as_ref().unwrap().statements[0])
+        .try_into()
+        .unwrap();
+    test_identifier(alternative.expression.unwrap(), "y".to_string());
+}
