@@ -49,6 +49,7 @@ impl<'a> Parser<'a> {
         p.register_prefix(TokenKind::False, Parser::parse_boolean);
         p.register_prefix(TokenKind::Bang, Parser::parse_prefix_expression);
         p.register_prefix(TokenKind::Minus, Parser::parse_prefix_expression);
+        p.register_prefix(TokenKind::LParen, Parser::parse_grouped_expression);
 
         p.register_infix(TokenKind::Plus, Parser::parse_infix_expression);
         p.register_infix(TokenKind::Minus, Parser::parse_infix_expression);
@@ -269,5 +270,17 @@ impl<'a> Parser<'a> {
         let right = self.parse_expression(precedence);
 
         Some(InfixExpression::new(token, left, operator, right).into())
+    }
+
+    fn parse_grouped_expression(&mut self) -> Option<Expression> {
+        self.next_token();
+
+        let exp = self.parse_expression(Precedence::Lowest);
+
+        if !self.expect_peek(TokenKind::RParen) {
+            return None;
+        }
+
+        exp
     }
 }
