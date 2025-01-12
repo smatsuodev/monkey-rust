@@ -2,8 +2,8 @@
 mod test;
 
 use crate::ast::{
-    Expression, ExpressionStatement, Identifier, InfixExpression, IntegerLiteral, LetStatement,
-    PrefixExpression, Program, ReturnStatement, Statement,
+    Boolean, Expression, ExpressionStatement, Identifier, InfixExpression, IntegerLiteral,
+    LetStatement, PrefixExpression, Program, ReturnStatement, Statement,
 };
 use crate::lexer::Lexer;
 use crate::token::{Token, TokenKind};
@@ -45,6 +45,8 @@ impl<'a> Parser<'a> {
 
         p.register_prefix(TokenKind::Ident, Parser::parse_identifier);
         p.register_prefix(TokenKind::Int, Parser::parse_integer_literal);
+        p.register_prefix(TokenKind::True, Parser::parse_boolean);
+        p.register_prefix(TokenKind::False, Parser::parse_boolean);
         p.register_prefix(TokenKind::Bang, Parser::parse_prefix_expression);
         p.register_prefix(TokenKind::Minus, Parser::parse_prefix_expression);
 
@@ -240,6 +242,10 @@ impl<'a> Parser<'a> {
         })?;
 
         Some(IntegerLiteral::new(token, value).into())
+    }
+
+    fn parse_boolean(&mut self) -> Option<Expression> {
+        Some(Boolean::new(self.cur_token.clone(), self.cur_token_is(TokenKind::True)).into())
     }
 
     fn parse_prefix_expression(&mut self) -> Option<Expression> {

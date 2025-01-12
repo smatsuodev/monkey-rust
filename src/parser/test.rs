@@ -27,14 +27,23 @@ fn test_identifier(exp: Expression, value: String) {
     assert_eq!(ident.token_literal(), value);
 }
 
+fn test_boolean_literal(exp: Expression, value: bool) {
+    assert!(matches!(exp, Expression::Boolean(_)));
+    let boolean: Boolean = exp.try_into().unwrap();
+    assert_eq!(boolean.value, value);
+    assert_eq!(boolean.token_literal(), value.to_string());
+}
+
 macro_rules! test_literal_expression {
     ($exp:expr, $value:expr) => {
-        if let Some(value) = (&$value as &dyn Any).downcast_ref::<i32>() {
+        if let Some(value) = ($value as &dyn Any).downcast_ref::<i32>() {
             test_integer_literal($exp, *value as i64);
-        } else if let Some(value) = (&$value as &dyn Any).downcast_ref::<i64>() {
+        } else if let Some(value) = ($value as &dyn Any).downcast_ref::<i64>() {
             test_integer_literal($exp, *value);
-        } else if let Some(value) = (&$value as &dyn Any).downcast_ref::<&str>() {
+        } else if let Some(value) = ($value as &dyn Any).downcast_ref::<&str>() {
             test_identifier($exp, value.to_string());
+        } else if let Some(value) = ($value as &dyn Any).downcast_ref::<bool>() {
+            test_boolean_literal($exp, *value);
         } else {
             panic!(
                 "type of value not handled. got={:?}, type={:?}",
@@ -120,7 +129,7 @@ fn test_identifier_expression() {
     assert_eq!(program.statements.len(), 1);
 
     let stmt: ExpressionStatement = (&program.statements[0]).try_into().unwrap();
-    test_literal_expression!(stmt.expression.unwrap(), "foobar");
+    test_literal_expression!(stmt.expression.unwrap(), &"foobar");
 }
 
 #[test]
@@ -134,12 +143,17 @@ fn test_integer_literal_expression() {
     assert_eq!(program.statements.len(), 1);
 
     let stmt: ExpressionStatement = (&program.statements[0]).try_into().unwrap();
-    test_literal_expression!(stmt.expression.unwrap(), 5);
+    test_literal_expression!(stmt.expression.unwrap(), &5);
 }
 
 #[test]
 fn test_parsing_prefix_expressions() {
-    let prefix_tests = vec![("!5;", "!", 5), ("-15;", "-", 15)];
+    let prefix_tests: Vec<(&str, &str, &dyn Any)> = vec![
+        ("!5;", "!", &5),
+        ("-15;", "-", &15),
+        ("!true;", "!", &true),
+        ("!false;", "!", &false),
+    ];
 
     for (input, op, value) in prefix_tests {
         let mut l = Lexer::new(input);
@@ -157,15 +171,18 @@ fn test_parsing_prefix_expressions() {
 
 #[test]
 fn test_parsing_infix_expressions() {
-    let infix_tests = vec![
-        ("5 + 5;", 5, "+", 5),
-        ("5 - 5;", 5, "-", 5),
-        ("5 * 5;", 5, "*", 5),
-        ("5 / 5;", 5, "/", 5),
-        ("5 > 5;", 5, ">", 5),
-        ("5 < 5;", 5, "<", 5),
-        ("5 == 5;", 5, "==", 5),
-        ("5 != 5;", 5, "!=", 5),
+    let infix_tests: Vec<(&str, &dyn Any, &str, &dyn Any)> = vec![
+        ("5 + 5;", &5, "+", &5),
+        ("5 - 5;", &5, "-", &5),
+        ("5 * 5;", &5, "*", &5),
+        ("5 / 5;", &5, "/", &5),
+        ("5 > 5;", &5, ">", &5),
+        ("5 < 5;", &5, "<", &5),
+        ("5 == 5;", &5, "==", &5),
+        ("5 != 5;", &5, "!=", &5),
+        ("true == true", &true, "==", &true),
+        ("true != false", &true, "!=", &false),
+        ("false == false", &false, "==", &false),
     ];
 
     for (input, left, op, right) in infix_tests {
@@ -176,7 +193,6 @@ fn test_parsing_infix_expressions() {
         assert_eq!(program.statements.len(), 1);
 
         let stmt: ExpressionStatement = (&program.statements[0]).try_into().unwrap();
-        let a = stmt.expression.clone().unwrap();
         test_infix_expression!(stmt.expression.clone().unwrap(), left, op, right);
     }
 }
@@ -199,6 +215,10 @@ fn test_operator_precedence_parsing() {
             "3 + 4 * 5 == 3 * 1 + 4 * 5",
             "((3 + (4 * 5)) == ((3 * 1) + (4 * 5)))",
         ),
+        ("true", "true"),
+        ("false", "false"),
+        ("3 > 5 == false", "((3 > 5) == false)"),
+        ("3 < 5 == true", "((3 < 5) == true)"),
     ];
 
     for (input, expected) in tests {

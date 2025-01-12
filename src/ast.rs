@@ -24,6 +24,7 @@ define_node_enum!(
     IntegerLiteral,
     PrefixExpression,
     InfixExpression,
+    Boolean,
 );
 
 #[derive(Debug, Eq, PartialEq, Clone)]
@@ -254,5 +255,27 @@ impl InfixExpression {
             operator: operator.to_string(),
             right: right.map(Box::new),
         }
+    }
+}
+
+#[derive(Debug, Eq, PartialEq, Clone)]
+pub struct Boolean {
+    pub token: Token,
+    pub value: bool,
+}
+
+impl Node for Boolean {
+    fn token_literal(&self) -> String {
+        self.token.literal.clone()
+    }
+
+    fn to_string(&self) -> String {
+        self.token.literal.clone()
+    }
+}
+
+impl Boolean {
+    pub fn new(token: Token, value: bool) -> Boolean {
+        Boolean { token, value }
     }
 }
